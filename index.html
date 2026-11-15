@@ -1,0 +1,2325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fdf3e3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Максим">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 fill=%27%23fdf3e3%27/%3E%3Cpath d=%27M8 13 3 8.5A2.6 2.6 0 0 1 8 5a2.6 2.6 0 0 1 5 3.5Z%27 fill=%27%23e2687a%27/%3E%3C/svg%3E">
+<title>Максим — твой питомец</title>
+
+<!-- ==========================================================
+     ОФОРМЛЕНИЕ
+     Тёплая палитра, «жёсткие» тени и толстые рамки — под пиксель.
+     ========================================================== -->
+<style>
+:root{
+  --bg:        #f7e9d0;
+  --card:      #fffaf0;
+  --ink:       #4a3526;
+  --ink-soft:  #8a6f57;
+  --line:      #6b4a33;
+  --shadow:    #d8bd9a;
+
+  --hunger:    #e8964f;
+  --mood:      #e2687a;
+  --energy:    #7aa86b;
+
+  --btn:       #ffd9a0;
+  --btn-hi:    #ffe9c9;
+  --btn-active:#f3c283;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;
+  padding:22px 16px calc(26px + env(safe-area-inset-bottom));
+  display:flex;
+  justify-content:center;
+  background:
+    radial-gradient(900px 500px at 50% -15%, #fff6e5 0%, transparent 65%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.app{
+  width:100%;
+  max-width:400px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+/* ---------- Заголовок ---------- */
+header{text-align:center;padding:0 4px}
+h1{
+  margin:0;
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.sub{
+  margin-top:3px;
+  font-size:11.5px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-soft);
+}
+
+/* ---------- Экран с питомцем ---------- */
+.stage{
+  position:relative;
+  border:3px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  box-shadow:0 6px 0 var(--shadow);
+  overflow:hidden;
+}
+canvas{
+  display:block;
+  width:100%;
+  aspect-ratio:1 / 1;
+  image-rendering:pixelated;      /* главный секрет крупных пикселей */
+  image-rendering:crisp-edges;
+  cursor:pointer;
+}
+/* лёгкие «полосы» как у старого экрана */
+.stage::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(74,53,38,.035) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* ---------- Реплика питомца ---------- */
+.bubble{
+  position:absolute;
+  left:50%;
+  top:10px;
+  max-width:calc(100% - 24px);
+  text-align:center;
+  line-height:1.35;
+  transform:translate(-50%, -6px);
+  padding:7px 12px;
+  border:3px solid var(--line);
+  border-radius:10px;
+  background:#fffdf7;
+  font-size:13px;
+  font-weight:700;
+  white-space:normal;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease;
+}
+.bubble::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-9px;
+  width:10px;height:10px;
+  margin-left:-6px;
+  background:#fffdf7;
+  border-right:3px solid var(--line);
+  border-bottom:3px solid var(--line);
+  transform:rotate(45deg);
+}
+.bubble.show{opacity:1;transform:translate(-50%, 0)}
+
+/* ---------- «Ай!» при шлепке ---------- */
+.pop{
+  position:absolute;
+  left:50%;
+  top:34%;
+  transform:translate(-50%,0) scale(.6);
+  font-size:26px;
+  font-weight:900;
+  color:#e05a4f;
+  text-shadow:2px 2px 0 #fff4e2;
+  opacity:0;
+  pointer-events:none;
+}
+.pop.go{animation:pop .75s ease-out}
+@keyframes pop{
+  0%   {opacity:0; transform:translate(-50%, 6px) scale(.5) rotate(-6deg)}
+  25%  {opacity:1; transform:translate(-50%,-10px) scale(1.15) rotate(4deg)}
+  70%  {opacity:1; transform:translate(-50%,-18px) scale(1) rotate(-2deg)}
+  100% {opacity:0; transform:translate(-50%,-30px) scale(.95)}
+}
+
+/* ---------- Показатели ---------- */
+.stats{
+  display:grid;
+  gap:9px;
+  padding:12px 14px;
+  border:3px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  box-shadow:0 6px 0 var(--shadow);
+}
+.stat{
+  display:grid;
+  grid-template-columns:12px 1fr auto;
+  align-items:center;
+  gap:10px;
+}
+.chip{
+  width:12px;height:12px;
+  border:2px solid var(--line);
+  border-radius:3px;
+  background:var(--c);
+}
+.stat .name{
+  font-size:12.5px;
+  font-weight:700;
+  letter-spacing:.02em;
+  margin-bottom:3px;
+}
+.bar{
+  position:relative;
+  height:12px;
+  border:2px solid var(--line);
+  border-radius:4px;
+  background:#f0e0c6;
+  overflow:hidden;
+}
+.bar .fill{
+  height:100%;
+  width:100%;
+  background:var(--c);
+  transition:width .28s ease;
+}
+/* деления поверх заливки — «сегменты» */
+.bar::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:repeating-linear-gradient(
+    to right,
+    transparent 0 calc(10% - 2px),
+    rgba(74,53,38,.22) calc(10% - 2px) 10%
+  );
+}
+.val{
+  min-width:38px;
+  text-align:right;
+  font-size:12.5px;
+  font-weight:800;
+  font-variant-numeric:tabular-nums;
+  color:var(--ink-soft);
+}
+
+/* ---------- Панели ---------- */
+.panel{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.panel[hidden]{display:none}
+
+/* ---------- Вкладки ---------- */
+.tabs{
+  display:flex;
+  gap:8px;
+  padding:5px;
+  border:3px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  box-shadow:0 6px 0 var(--shadow);
+}
+.tab{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:9px 6px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--ink-soft);
+  font:inherit;
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+}
+.tab.is-active{
+  background:var(--btn);
+  color:var(--ink);
+  box-shadow:inset 0 -2px 0 rgba(107,74,51,.22);
+}
+.tab-badge{
+  min-width:20px;
+  padding:1px 5px;
+  border-radius:999px;
+  background:var(--mood);
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ---------- Строка «очки привязанности» ---------- */
+.bond-line{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  padding:11px 14px;
+  border:3px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  box-shadow:0 5px 0 var(--shadow);
+  color:var(--ink);
+  font:inherit;
+  font-size:12.5px;
+  font-weight:700;
+  cursor:pointer;
+}
+.bond-line:hover{background:#fffdf7}
+.bond-line.action{background:var(--btn)}
+.bond-line.action:hover{background:var(--btn-hi)}
+.bond-line:active{transform:translateY(3px);box-shadow:0 2px 0 var(--shadow)}
+.bond-line b{
+  font-size:15px;
+  font-weight:800;
+  color:var(--mood);
+  font-variant-numeric:tabular-nums;
+}
+.bond-line .arrow{color:var(--ink-soft);font-weight:800}
+
+/* ---------- Дерево навыков ---------- */
+.tree-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:0 2px;
+}
+.tree-title{font-size:15px;font-weight:800}
+.tree-sub{margin-top:2px;font-size:11.5px;color:var(--ink-soft)}
+.bond-big{
+  display:flex;
+  align-items:baseline;
+  gap:5px;
+  padding:7px 12px;
+  border:3px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  box-shadow:0 5px 0 var(--shadow);
+}
+.bond-big b{
+  font-size:20px;
+  font-weight:800;
+  color:var(--mood);
+  font-variant-numeric:tabular-nums;
+}
+.bond-big span{font-size:10.5px;color:var(--ink-soft);font-weight:700;text-transform:uppercase}
+
+.tree{
+  position:relative;
+  aspect-ratio:340 / 380;
+  border:3px solid var(--line);
+  border-radius:14px;
+  background:linear-gradient(180deg, #fffdf6 0%, #fdf0da 100%);
+  box-shadow:0 6px 0 var(--shadow);
+  overflow:hidden;
+}
+.tree .edges,
+.tree .nodes{position:absolute;inset:0;width:100%;height:100%}
+.tree .edges line{stroke:#c9ac86;stroke-width:3;stroke-dasharray:6 6}
+.tree .edges line.done{stroke:#8fbe6a;stroke-dasharray:none}
+
+.node{
+  position:absolute;
+  transform:translate(-50%, -50%);
+  width:76px;
+  padding:6px 4px 5px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  border:3px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  box-shadow:0 4px 0 var(--shadow);
+  cursor:pointer;
+  font:inherit;
+  color:var(--ink);
+  transition:transform .1s ease;
+}
+.node:hover{transform:translate(-50%, -50%) scale(1.04)}
+.node .node-icon{font-size:19px;line-height:1}
+.node .node-name{
+  font-size:9.5px;
+  font-weight:800;
+  line-height:1.15;
+  text-align:center;
+  letter-spacing:-.01em;
+}
+.node .badge{
+  position:absolute;
+  top:-10px;
+  right:-10px;
+  min-width:22px;
+  height:22px;
+  padding:0 4px;
+  display:grid;
+  place-items:center;
+  border:2px solid var(--line);
+  border-radius:999px;
+  background:#fff;
+  font-size:10.5px;
+  font-weight:800;
+}
+.node.is-locked{
+  opacity:.6;
+  filter:grayscale(1);
+  cursor:not-allowed;
+}
+.node.is-ready{
+  background:#fff3d9;
+  border-color:#c98a3f;
+  animation:pulse 1.7s ease-in-out infinite;
+}
+.node.is-ready .badge{background:#ffe6bf;color:#8a5a2b}
+.node.is-done{
+  background:#e9f5da;
+  border-color:#5b8a3f;
+}
+.node.is-done .badge{background:#5b8a3f;border-color:#3f652c;color:#fff}
+.node.is-done .node-name{color:#3f652c}
+
+@keyframes pulse{
+  0%,100%{box-shadow:0 4px 0 var(--shadow), 0 0 0 0 rgba(232,150,79,.55)}
+  50%    {box-shadow:0 4px 0 var(--shadow), 0 0 0 7px rgba(232,150,79,0)}
+}
+
+.node-info{
+  padding:10px 12px;
+  border:3px solid var(--line);
+  border-radius:12px;
+  background:var(--card);
+  box-shadow:0 5px 0 var(--shadow);
+  font-size:12px;
+  line-height:1.45;
+  color:var(--ink-soft);
+  min-height:52px;
+}
+.node-info b{color:var(--ink)}
+
+/* ---------- Кнопки ---------- */
+.actions{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+}
+button.act{
+  appearance:none;
+  padding:13px 6px 15px;
+  border:3px solid var(--line);
+  border-radius:12px;
+  background:var(--btn);
+  color:var(--ink);
+  font:inherit;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.01em;
+  cursor:pointer;
+  box-shadow:0 5px 0 var(--line);
+  transition:transform .07s ease, box-shadow .07s ease, background .12s ease;
+}
+button.act:hover{background:var(--btn-hi)}
+button.act:active{
+  transform:translateY(5px);
+  box-shadow:0 0 0 var(--line);
+  background:var(--btn-active);
+}
+button.act .ico{display:block;font-size:19px;margin-bottom:3px;line-height:1}
+
+.footnote{
+  margin:2px 0 0;
+  text-align:center;
+  font-size:11.5px;
+  color:var(--ink-soft);
+}
+
+@media (max-width:360px){
+  button.act{font-size:12px;padding:12px 4px 14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+
+/* ---------- Панель особых кнопок ---------- */
+.special{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.special[hidden]{display:none}
+.sp{
+  flex:1 1 auto;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:9px 12px;
+  border:3px solid var(--line);
+  border-radius:11px;
+  background:var(--card);
+  color:var(--ink);
+  font:inherit;
+  font-size:12.5px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 4px 0 var(--shadow);
+  transition:transform .08s ease, background .12s ease;
+}
+.sp:hover{background:#fffdf7}
+.sp:active{transform:translateY(3px);box-shadow:0 1px 0 var(--shadow)}
+.sp-ico{font-size:15px;line-height:1}
+
+/* ---------- Свечение «того самого» ---------- */
+.stage.glow{animation:stageGlow 2.6s ease-in-out infinite}
+@keyframes stageGlow{
+  0%,100%{box-shadow:0 6px 0 var(--shadow)}
+  50%{box-shadow:0 6px 0 var(--shadow), 0 0 0 3px rgba(240,200,105,.55), 0 0 26px rgba(240,200,105,.45)}
+}
+
+/* ---------- Дерево на четыре ветки ---------- */
+.tree{
+  aspect-ratio:400 / 520;
+}
+.node{
+  width:22%;
+  min-width:0;
+  padding:5px 3px 4px;
+  gap:1px;
+}
+.node .node-icon{font-size:15px;line-height:1}
+.node .node-name{font-size:7.5px;line-height:1.12}
+.node .badge{min-width:18px;height:18px;top:-8px;right:-8px;font-size:9px}
+.node.is-final{
+  background:#fff1f6;
+  border-color:#c46a86;
+}
+.node.is-final.is-done{
+  background:#ffe0ea;
+  border-color:#b84a6e;
+}
+.tree .edges line{
+  stroke:#c9ac86;
+  stroke-width:2.5;
+  stroke-dasharray:5 5;
+}
+.tree .edges line.done{stroke:#8fbe6a;stroke-dasharray:none}
+
+/* ---------- Вкладка-иконка ---------- */
+.tab-icon{flex:0 0 auto;padding:9px 14px;font-size:15px}
+
+/* ---------- Настройки ---------- */
+.settings{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:14px;
+  border:3px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  box-shadow:0 6px 0 var(--shadow);
+}
+.set-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.set-text b{display:block;font-size:13px}
+.set-text span{font-size:11.5px;color:var(--ink-soft)}
+.switch{
+  position:relative;
+  flex:none;
+  width:54px;height:30px;
+  padding:0;
+  border:3px solid var(--line);
+  border-radius:999px;
+  background:#efe1c8;
+  cursor:pointer;
+  transition:background .15s ease;
+}
+.switch .knob{
+  position:absolute;
+  top:1px;left:1px;
+  width:22px;height:22px;
+  border:2px solid var(--line);
+  border-radius:50%;
+  background:#fffdf7;
+  transition:transform .15s ease;
+}
+.switch[aria-checked="true"]{background:#b9e2a2}
+.switch[aria-checked="true"] .knob{transform:translateX(24px)}
+.btn.wide{width:100%;justify-content:center;padding:11px}
+.set-field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--ink-soft)}
+.set-field input{
+  padding:9px 11px;
+  border:3px solid var(--line);
+  border-radius:10px;
+  background:#fffdf7;
+  color:var(--ink);
+  font:inherit;
+  font-size:13px;
+}
+
+.set-danger{
+  margin-top:4px;
+  padding-top:12px;
+  border-top:1px dashed var(--border);
+}
+.set-danger .set-text{margin-bottom:8px}
+
+/* ---------- Вступление ---------- */
+.intro{
+  position:fixed;
+  inset:0;
+  z-index:90;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+  padding:18px;
+  background:#07080d;
+  opacity:1;
+  transition:opacity .4s ease;
+}
+.intro[hidden]{display:none}
+.intro.fade-out{opacity:0;pointer-events:none}
+.intro-stage{
+  position:relative;
+  width:min(92vw, 560px);
+}
+.intro-stage canvas{
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:96 / 72;
+  image-rendering:pixelated;
+  border-radius:14px;
+  box-shadow:0 0 60px rgba(240,185,106,.12);
+}
+.intro-bubble{
+  position:absolute;
+  left:5%;
+  top:6%;
+  width:58%;
+  padding:8px 10px;
+  border:3px solid #6b4a33;
+  border-radius:10px;
+  background:#fffdf7;
+  color:#3b2c26;
+  font-size:13px;
+  line-height:1.35;
+  font-weight:600;
+  box-shadow:0 4px 0 rgba(0,0,0,.35);
+}
+.intro-bubble[hidden]{display:none}
+.intro-name{
+  display:inline-block;
+  margin-bottom:4px;
+  padding:1px 6px;
+  border-radius:6px;
+  background:#f0d7b0;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  color:#6b4a33;
+}
+.intro-btn{
+  min-width:180px;
+  justify-content:center;
+  animation:pop-in .35s ease both;
+}
+@keyframes pop-in{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:none}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <header>
+    <h1 id="petName">Максим</h1>
+    <div class="sub" id="status">он рядом</div>
+  </header>
+
+  <!-- Вкладки -->
+  <nav class="tabs" role="tablist" aria-label="Разделы">
+    <button class="tab is-active" id="tabPet" type="button" role="tab"
+            aria-selected="true" aria-controls="panelPet">Питомец</button>
+    <button class="tab" id="tabTree" type="button" role="tab"
+            aria-selected="false" aria-controls="panelTree">
+      Дерево <span class="tab-badge" id="tabCare">0</span>
+    </button>
+    <button class="tab tab-icon" id="tabSettings" type="button" role="tab"
+            aria-selected="false" aria-controls="panelSettings"
+            aria-label="Настройки" title="Настройки">⚙️</button>
+  </nav>
+
+  <!-- ================= Панель 1: питомец ================= -->
+  <div class="panel" id="panelPet" role="tabpanel" aria-labelledby="tabPet">
+
+  <!-- Экран -->
+  <div class="stage" id="stage">
+    <canvas id="scene" width="64" height="64" aria-label="Максим"></canvas>
+    <div class="bubble" id="bubble">Привет!</div>
+    <div class="pop" id="pop">Ай!</div>
+  </div>
+
+  <!-- Показатели -->
+  <div class="stats">
+    <div class="stat" style="--c:var(--hunger)">
+      <span class="chip"></span>
+      <div>
+        <div class="name">Сытость</div>
+        <div class="bar"><div class="fill" id="barHunger"></div></div>
+      </div>
+      <span class="val" id="valHunger">100</span>
+    </div>
+
+    <div class="stat" style="--c:var(--mood)">
+      <span class="chip"></span>
+      <div>
+        <div class="name">Настроение</div>
+        <div class="bar"><div class="fill" id="barMood"></div></div>
+      </div>
+      <span class="val" id="valMood">100</span>
+    </div>
+
+    <div class="stat" style="--c:var(--energy)">
+      <span class="chip"></span>
+      <div>
+        <div class="name">Энергия</div>
+        <div class="bar"><div class="fill" id="barEnergy"></div></div>
+      </div>
+      <span class="val" id="valEnergy">100</span>
+    </div>
+  </div>
+
+  <!-- Кнопки -->
+  <div class="actions">
+    <button class="act" type="button" data-act="feed"><span class="ico">🍞</span>Покормить</button>
+    <button class="act" type="button" data-act="hug"><span class="ico">💛</span>Обнять</button>
+    <button class="act" type="button" data-act="pat"><span class="ico">🖐</span>Шлёпнуть</button>
+  </div>
+
+  <div class="special" id="special" hidden></div>
+
+  <button class="bond-line action" id="sayBtn" type="button">💬 Сказать что-нибудь</button>
+
+  <button class="bond-line" id="careLine" type="button">
+    <span>Очки заботы</span>
+    <b id="careSmall">0</b>
+    <span class="arrow">→ дерево</span>
+  </button>
+
+  </div><!-- /panelPet -->
+
+  <!-- ================= Панель 2: дерево навыков ================= -->
+  <div class="panel" id="panelTree" role="tabpanel" aria-labelledby="tabTree" hidden>
+
+    <div class="tree-head">
+      <div>
+        <div class="tree-title">Парень +1</div>
+        <div class="tree-sub">Четыре ветки: романтика, забота, слова и быт</div>
+      </div>
+      <div class="bond-big"><b id="careBig">0</b><span>очков</span></div>
+    </div>
+
+    <div class="tree" id="tree">
+      <svg class="edges" id="edges" viewBox="0 0 400 520" preserveAspectRatio="none"
+           aria-hidden="true"></svg>
+      <div class="nodes" id="nodes"></div>
+    </div>
+
+    <div class="node-info" id="nodeInfo">Нажмите на подсвеченный узел, чтобы изучить навык</div>
+
+    <p class="footnote">Очки заботы дают кормление, объятия и шлёпки</p>
+  </div>
+
+  <!-- ================= Панель 3: настройки ================= -->
+  <div class="panel" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings" hidden>
+    <div class="settings">
+
+      <div class="set-row">
+        <div class="set-text">
+          <b>Вступление при запуске</b>
+          <span>Короткая сцена пробуждения</span>
+        </div>
+        <button class="switch" id="introToggle" type="button" role="switch" aria-checked="true"
+                aria-label="Показывать вступление">️​<span class="knob"></span></button>
+      </div>
+
+      <button class="btn btn-ghost wide" id="replayIntro" type="button">
+        Посмотреть вступление ещё раз
+      </button>
+
+      <div class="set-row">
+        <div class="set-text">
+          <b>Звук</b>
+          <span>Тихие писки и мелодия</span>
+        </div>
+        <button class="switch" id="soundToggle" type="button" role="switch" aria-checked="true"
+                aria-label="Звук">️​<span class="knob"></span></button>
+      </div>
+
+      <label class="set-field">
+        <span>Имя питомца</span>
+        <input id="nameInput" type="text" maxlength="20" placeholder="Максим"
+               autocomplete="off" spellcheck="false">
+      </label>
+
+      <div class="set-danger">
+        <div class="set-text">
+          <b>Сбросить прогресс</b>
+          <span>Шкалы, очки и навыки обнулятся. Настройки и имя останутся</span>
+        </div>
+        <button class="btn btn-danger-ghost wide" id="resetBtn" type="button">
+          Сбросить игру
+        </button>
+      </div>
+
+    </div>
+    <p class="footnote">Настройки сохраняются сами</p>
+  </div>
+</div>
+
+<!-- ============ ВСТУПЛЕНИЕ ============ -->
+<div class="intro" id="intro" hidden>
+  <div class="intro-stage">
+    <canvas id="introCanvas" width="96" height="72" aria-label="Вступление"></canvas>
+    <div class="intro-bubble" id="introBubble" hidden>
+      <div class="intro-name" id="introName" hidden></div>
+      <span id="introText"></span>
+    </div>
+  </div>
+  <button class="btn intro-btn" id="introStart" type="button" hidden>Начать</button>
+</div>
+
+<!-- ==========================================================
+     ИГРА
+     ========================================================== -->
+<script>
+"use strict";
+
+/* ============================================================
+   1. НАСТРОЙКИ
+   ============================================================ */
+const KEY = "pixel-pet.v1";
+
+/* ============================================================
+   ВНЕШНОСТЬ ПЕРСОНАЖА — МЕНЯЙ ЗДЕСЬ
+   ============================================================ */
+const LOOK = {
+  name:      "Максим",
+  skin:      "#e6b088",
+  hair:      "#7a4a2b",
+  hairLight: "#9a6238",
+  hoodie:    "#26262f",
+  hoodieDark:"#2f2f3a",
+  pants:     "#131318",
+  shoes:     "#efe7da",
+  shoeSole:  "#c9bda9",
+  glasses:   true,
+  beard:     false,
+  backpack:  true
+};
+
+const LIVE_DECAY    = 8;    // секунд на 1 единицу энергии
+const OFFLINE_DECAY = 60;   // секунд на 1 единицу, пока закрыто
+const OFFLINE_CAP   = 40;   // максимум, что съедает отсутствие
+
+/* ============================================================
+   2. ФРАЗЫ
+   ============================================================ */
+
+/* МОИ ФРАЗЫ — МЕНЯЙ ЗДЕСЬ */
+const MY_PHRASES = [
+  "Ты сегодня отлично справляешься",
+  "Я в тебя верю",
+  "Не забудь отдохнуть",
+  "Обнимаю тебя",
+  "Даже если что-то не вышло — ты молодец",
+  "Попей воды, я подожду",
+  "Ты важнее любых дедлайнов",
+  "Улыбнись, у тебя милая улыбка",
+  "Я тут, если что",
+  "Сегодня можно сделать чуть меньше",
+  "Ты справишься, я проверял",
+  "Погладь меня, и станет легче"
+];
+
+/* Открываются навыком «Новое слово» */
+const BONUS_PHRASES = [
+  "Ты — мой человек",
+  "Горжусь тобой!",
+  "Спасибо, что ты рядом",
+  "У тебя всё получится",
+  "С тобой даже понедельник терпимый"
+];
+
+/* Навык «Романтик» */
+const CONFESSIONS = [
+  "Знаешь, я каждый день радуюсь, что это ты",
+  "Ты — лучшее, что со мной случилось",
+  "Я бы снова выбрал тебя. И снова",
+  "Мне очень повезло с тобой"
+];
+
+/* Навык «Комплимент» */
+const COMPLIMENTS = [
+  "У тебя сегодня особенно красивые глаза",
+  "Ты смеёшься — и у меня день удался",
+  "Ты очень умная, я проверял",
+  "В этой кофте ты просто космос"
+];
+
+/* Навык «Шутка» */
+const JOKES = [
+  "Почему я не хожу в спортзал? Боюсь стать слишком привлекательным",
+  "Я не ленивый, я в режиме энергосбережения",
+  "У меня две проблемы: я хочу есть и я только что поел",
+  "Ты сказала «пять минут» — я уже успел состариться"
+];
+
+/* Навык «Поддержка 24/7» */
+const PLEAS = [
+  "Мне немного грустно… посидишь со мной?",
+  "Эй, я тут скучаю. Обними?",
+  "Кажется, мне не хватает тебя"
+];
+
+/* ============================================================
+   3. ДЕРЕВО «ПАРЕНЬ +1»
+   4 ветки по 4 узла + финальный «Тот самый».
+   Ветка 4 короткая, её «Помощник» зависит от «Любимой еды».
+   ============================================================ */
+const NODES = [
+  /* --- Ветка 1: Романтика --- */
+  { id: "hug", branch: 1, name: "Крепкие объятия", icon: "🤗", cost: 10, needs: [], x: 52, y: 80,
+    desc: "Объятия дают +10 настроения вместо +5." },
+  { id: "flowers", branch: 1, name: "Цветы без повода", icon: "🌷", cost: 15, needs: ["hug"], x: 52, y: 175,
+    desc: "Первое объятие за день приносит ещё +15 настроения." },
+  { id: "romantic", branch: 1, name: "Романтик", icon: "💌", cost: 20, needs: ["flowers"], x: 52, y: 270,
+    desc: "Раз в сутки 20% шанс на особое признание." },
+  { id: "date", branch: 1, name: "Свидание мечты", icon: "🍷", cost: 30, needs: ["romantic"], x: 52, y: 365,
+    desc: "Раз в сутки при настроении 90+ устраивает свидание: +30 к настроению и сытости." },
+
+  /* --- Ветка 2: Забота --- */
+  { id: "food", branch: 2, name: "Любимая еда", icon: "🍜", cost: 10, needs: [], x: 148, y: 80,
+    desc: "Кормление даёт +15 сытости вместо +10." },
+  { id: "cook", branch: 2, name: "Готовлю сам", icon: "🍳", cost: 15, needs: ["food"], x: 148, y: 175,
+    desc: "Кнопка «Приготовить»: +20 сытости, +5 настроения, −10 энергии." },
+  { id: "patience", branch: 2, name: "Терпение", icon: "⏳", cost: 20, needs: ["cook"], x: 148, y: 270,
+    desc: "Энергия тратится на 25% медленнее." },
+  { id: "evening", branch: 2, name: "Уютный вечер", icon: "🕯️", cost: 30, needs: ["patience"], x: 148, y: 365,
+    desc: "При энергии ниже 30 кнопка «Плед и чай»: +30 энергии, +10 настроения." },
+
+  /* --- Ветка 3: Слова и юмор --- */
+  { id: "word", branch: 3, name: "Новое слово", icon: "💬", cost: 10, needs: [], x: 244, y: 80,
+    desc: "Открывает 5 новых фраз." },
+  { id: "compliment", branch: 3, name: "Комплимент", icon: "😊", cost: 15, needs: ["word"], x: 244, y: 175,
+    desc: "При объятии 30% шанс на комплимент." },
+  { id: "joke", branch: 3, name: "Шутка", icon: "😄", cost: 20, needs: ["compliment"], x: 244, y: 270,
+    desc: "Раз в час шутит: нажми «ха-ха» и получишь +5 настроения." },
+  { id: "support", branch: 3, name: "Поддержка 24/7", icon: "🫶", cost: 30, needs: ["joke"], x: 244, y: 365,
+    desc: "Если настроение ниже 30, он мило просит внимания." },
+
+  /* --- Ветка 4: Быт --- */
+  { id: "sleep", branch: 4, name: "Сон", icon: "😴", cost: 10, needs: [], x: 340, y: 80,
+    desc: "Кнопка «Уложить спать»: энергия полностью, но −10 настроения." },
+  { id: "helper", branch: 4, name: "Помощник", icon: "🧽", cost: 15, needs: ["food"], x: 340, y: 175,
+    desc: "При кормлении иногда появляется пятнышко. «Помыть посуду» убирает его и даёт +3 очка заботы." },
+  { id: "routine", branch: 4, name: "Режим", icon: "🕰️", cost: 20, needs: ["sleep"], x: 340, y: 270,
+    desc: "Энергия тратится ещё на 10% медленнее." },
+
+  /* --- Финал --- */
+  { id: "best", branch: 0, final: true, name: "Тот самый", icon: "💖", cost: 0,
+    needs: ["date", "evening", "support", "routine"], needAny: 3, x: 196, y: 465,
+    desc: "Финальный узел: +5 очков заботы за каждое действие и особое свечение." }
+];
+
+/* ============================================================
+   4. СОСТОЯНИЕ
+   ============================================================ */
+const S = {
+  hunger: 70,
+  mood: 60,
+  energy: 80,
+  care: 0,                  // очки заботы
+  skills: [],
+
+  t: 0,
+  lastFrame: 0,
+  nextBlink: 2.5,
+  blinkUntil: 0,
+  eyes: "open",
+  action: null,
+  actionUntil: 0,
+  jump: 0,
+  hearts: [],
+  sparks: [],
+  zzz: [],
+  sayUntil: 0,
+  nextPhrase: 30,
+
+  flowersDay: "",
+  confessionDay: "",
+  jokeKey: "",
+  jokeUntil: 0,
+  stain: false,
+  dateDay: ""
+};
+
+const els = {
+  canvas: document.getElementById("scene"),
+  bubble: document.getElementById("bubble"),
+  pop: document.getElementById("pop"),
+  status: document.getElementById("status"),
+  barHunger: document.getElementById("barHunger"),
+  barMood: document.getElementById("barMood"),
+  barEnergy: document.getElementById("barEnergy"),
+  valHunger: document.getElementById("valHunger"),
+  valMood: document.getElementById("valMood"),
+  valEnergy: document.getElementById("valEnergy"),
+
+  tabPet: document.getElementById("tabPet"),
+  tabTree: document.getElementById("tabTree"),
+  tabCare: document.getElementById("tabCare"),
+  panelPet: document.getElementById("panelPet"),
+  panelTree: document.getElementById("panelTree"),
+  careLine: document.getElementById("careLine"),
+  careSmall: document.getElementById("careSmall"),
+  careBig: document.getElementById("careBig"),
+  tree: document.getElementById("tree"),
+  edges: document.getElementById("edges"),
+  nodes: document.getElementById("nodes"),
+  nodeInfo: document.getElementById("nodeInfo"),
+  stage: document.getElementById("stage"),
+
+  special: document.getElementById("special"),
+  sayBtn: document.getElementById("sayBtn"),
+
+
+  tabSettings: document.getElementById("tabSettings"),
+  panelSettings: document.getElementById("panelSettings"),
+  introToggle: document.getElementById("introToggle"),
+  soundToggle: document.getElementById("soundToggle"),
+  replayIntro: document.getElementById("replayIntro"),
+  nameInput: document.getElementById("nameInput"),
+  resetBtn: document.getElementById("resetBtn"),
+
+  intro: document.getElementById("intro"),
+  introCanvas: document.getElementById("introCanvas"),
+  introBubble: document.getElementById("introBubble"),
+  introName: document.getElementById("introName"),
+  introText: document.getElementById("introText"),
+  introStart: document.getElementById("introStart")
+};
+
+const ctx = els.canvas.getContext("2d");
+
+/* ============================================================
+   5. МЕЛОЧИ
+   ============================================================ */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const has = (id) => S.skills.indexOf(id) !== -1;
+
+function R(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+}
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function dayKey() {
+  const d = new Date();
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+}
+function hourKey() { return dayKey() + "-" + pad2(new Date().getHours()); }
+
+/* ============================================================
+   6. СОХРАНЕНИЕ
+   ============================================================ */
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({
+      hunger: Math.round(S.hunger),
+      mood: Math.round(S.mood),
+      energy: Math.round(S.energy),
+      care: Math.round(S.care),
+      skills: S.skills.slice(),
+      flowersDay: S.flowersDay,
+      confessionDay: S.confessionDay,
+      jokeKey: S.jokeKey,
+      dateDay: S.dateDay,
+      stain: S.stain,
+      at: Date.now()
+    }));
+  } catch (e) { /* приватный режим */ }
+}
+
+function load() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEY); } catch (e) { return; }
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    if (typeof d.hunger === "number") S.hunger = clamp(d.hunger, 0, 100);
+    if (typeof d.mood === "number")   S.mood = clamp(d.mood, 0, 100);
+    if (typeof d.energy === "number") S.energy = clamp(d.energy, 0, 100);
+    if (typeof d.care === "number")   S.care = Math.max(0, Math.round(d.care));
+    if (Array.isArray(d.skills)) {
+      S.skills = d.skills.filter(id => NODES.some(n => n.id === id));
+    }
+    if (typeof d.flowersDay === "string") S.flowersDay = d.flowersDay;
+    if (typeof d.confessionDay === "string") S.confessionDay = d.confessionDay;
+    if (typeof d.jokeKey === "string") S.jokeKey = d.jokeKey;
+    if (typeof d.dateDay === "string") S.dateDay = d.dateDay;
+    S.stain = Boolean(d.stain);
+
+    if (typeof d.at === "number") {
+      const away = Math.max(0, (Date.now() - d.at) / 1000);
+      S.energy = clamp(S.energy - Math.min(OFFLINE_CAP, away / OFFLINE_DECAY), 0, 100);
+    }
+  } catch (e) { /* битые данные */ }
+}
+
+/* ============================================================
+   7. ИНТЕРФЕЙС
+   ============================================================ */
+function paintStats() {
+  const h = Math.round(S.hunger), m = Math.round(S.mood), e = Math.round(S.energy);
+  els.barHunger.style.width = h + "%";
+  els.barMood.style.width = m + "%";
+  els.barEnergy.style.width = e + "%";
+  els.valHunger.textContent = h;
+  els.valMood.textContent = m;
+  els.valEnergy.textContent = e;
+
+  els.careSmall.textContent = Math.round(S.care);
+  els.careBig.textContent = Math.round(S.care);
+  els.tabCare.textContent = Math.round(S.care);
+  els.tabCare.hidden = S.care === 0;
+
+  let text = "он рядом";
+  if (e < 20) text = "он засыпает";
+  else if (S.hunger < 25) text = "он голодный";
+  else if (S.mood < 25) text = "он грустит";
+  else if (e < 45) text = "он устал";
+  else if (S.hunger > 85 && S.mood > 85) text = "он счастлив";
+  els.status.textContent = text;
+
+  renderSpecial();
+  els.stage.classList.toggle("glow", has("best"));
+}
+
+/** Кнопки, которые появляются по условиям навыков. */
+let specialSig = null;
+
+function renderSpecial() {
+  const items = [];
+  if (has("evening") && S.energy < 30) items.push(["tea", "☕", "Плед и чай"]);
+  if (has("helper") && S.stain) items.push(["wash", "🧽", "Помыть посуду"]);
+  if (has("cook")) items.push(["cook", "🍳", "Приготовить"]);
+  if (has("sleep")) items.push(["sleep", "😴", "Уложить спать"]);
+  if (S.jokeUntil > S.t) items.push(["haha", "😆", "ха-ха"]);
+
+  const sig = items.map(i => i[0]).join(",");
+
+  if (!items.length) {
+    if (specialSig !== "") {
+      specialSig = "";
+      els.special.hidden = true;
+      els.special.innerHTML = "";
+    }
+    return;
+  }
+
+  if (sig === specialSig) return;   // не пересобираем кнопки каждый кадр
+  specialSig = sig;
+  els.special.hidden = false;
+  els.special.innerHTML = items.map(([id, icon, label]) =>
+    '<button class="sp" type="button" data-sp="' + id + '">' +
+    '<span class="sp-ico">' + icon + "</span>" + label + "</button>"
+  ).join("");
+}
+
+function say(text, ms = 1900) {
+  els.bubble.textContent = text;
+  els.bubble.classList.add("show");
+  S.sayUntil = S.t + ms / 1000;
+}
+
+function popAy() {
+  els.pop.classList.remove("go");
+  void els.pop.offsetWidth;
+  els.pop.classList.add("go");
+}
+
+function gainCare(n) {
+  const bonus = has("best") ? 5 : 0;
+  S.care = clamp(S.care + n + bonus, 0, 9999);
+  paintStats();
+}
+
+/* ============================================================
+   8. ДЕЙСТВИЯ
+   ============================================================ */
+function feed() {
+  if (S.hunger >= 99) {
+    say("Я уже сыт!");
+    S.mood = clamp(S.mood + 1, 0, 100);
+    paintStats();
+    return;
+  }
+  const value = has("food") ? 15 : 10;
+  S.hunger = clamp(S.hunger + value, 0, 100);
+  S.energy = clamp(S.energy + 5, 0, 100);
+  S.mood = clamp(S.mood + 3, 0, 100);
+  S.action = "eat";
+  S.actionUntil = S.t + 1.1;
+  say("Ням-ням!", 1500);
+
+  for (let i = 0; i < 8; i++) {
+    S.sparks.push({ x: 32 + rand(-9, 9), y: 36 + rand(-6, 4), vy: rand(-14, -6), life: rand(0.4, 0.8), max: 0.8 });
+  }
+
+  gainCare(2);
+
+  if (has("helper") && !S.stain && Math.random() < 0.35) {
+    S.stain = true;
+    say("Ой… кажется, пятнышко", 2200);
+  }
+
+  save();
+  paintStats();
+}
+
+function hug() {
+  let gain = has("hug") ? 10 : 5;
+  const today = dayKey();
+
+  if (has("flowers") && S.flowersDay !== today) {
+    gain += 15;
+    S.flowersDay = today;
+  }
+
+  S.mood = clamp(S.mood + gain, 0, 100);
+  S.energy = clamp(S.energy + 2, 0, 100);
+  S.action = "hug";
+  S.actionUntil = S.t + 1.2;
+  say("Обнимашки!", 1600);
+
+  for (let i = 0; i < 5; i++) {
+    S.hearts.push({
+      x: 32 + rand(-13, 13), y: 24 + rand(-5, 3),
+      vy: rand(-15, -9), vx: rand(-5, 5),
+      life: rand(0.8, 1.6), max: 1.6
+    });
+  }
+
+  gainCare(2);
+
+  if (has("compliment") && Math.random() < 0.3) {
+    say(pick(COMPLIMENTS), 4200);
+  }
+  if (has("romantic") && S.confessionDay !== today && Math.random() < 0.2) {
+    S.confessionDay = today;
+    say(pick(CONFESSIONS), 5000);
+  }
+
+  save();
+  paintStats();
+}
+
+function pat() {
+  S.mood = clamp(S.mood - 5, 0, 100);
+  S.action = "pat";
+  S.actionUntil = S.t + 0.9;
+  popAy();
+  say("Ай! Ну не так сильно…", 1800);
+
+  for (let i = 0; i < 5; i++) {
+    S.sparks.push({ x: 32 + rand(-8, 8), y: 30 + rand(-4, 4), vy: rand(-20, -10), life: rand(0.3, 0.6), max: 0.6 });
+  }
+
+  gainCare(1);
+  save();
+  paintStats();
+}
+
+function cook() {
+  if (S.energy < 10) { say("Сил нет даже на бутерброд", 2200); return; }
+  S.hunger = clamp(S.hunger + 20, 0, 100);
+  S.mood = clamp(S.mood + 5, 0, 100);
+  S.energy = clamp(S.energy - 10, 0, 100);
+  S.action = "eat";
+  S.actionUntil = S.t + 1.2;
+  say("Сейчас что-нибудь соображу!", 2400);
+  save();
+  paintStats();
+}
+
+function sleepPet() {
+  S.energy = 100;
+  S.mood = clamp(S.mood - 10, 0, 100);
+  S.eyes = "sleepy";
+  say("Всё, я спать. Разбудишь — обниму", 3000);
+  save();
+  paintStats();
+}
+
+function blanketTea() {
+  S.energy = clamp(S.energy + 30, 0, 100);
+  S.mood = clamp(S.mood + 10, 0, 100);
+  say("Плед, чай и ты рядом — идеально", 3000);
+  save();
+  paintStats();
+}
+
+function washDishes() {
+  S.stain = false;
+  S.mood = clamp(S.mood + 2, 0, 100);
+  gainCare(3);
+  say("Чисто! Я даже посуду помыл", 2400);
+  save();
+  paintStats();
+}
+
+function haha() {
+  S.mood = clamp(S.mood + 5, 0, 100);
+  S.jokeUntil = 0;
+  say("Хе-хе! Значит, смешно", 1800);
+  paintStats();
+}
+
+/* ============================================================
+   9. ДЕРЕВО
+   ============================================================ */
+const FINALS = ["date", "evening", "support", "routine"];
+
+function nodeState(node) {
+  if (has(node.id)) return "done";
+  if (node.final) {
+    const done = FINALS.filter(has).length;
+    return done >= (node.needAny || 3) ? "ready" : "locked";
+  }
+  return node.needs.every(has) ? "ready" : "locked";
+}
+
+function learnSkill(id) {
+  const node = NODES.find(n => n.id === id);
+  if (!node || has(id)) return;
+
+  if (node.final) {
+    if (nodeState(node) !== "ready") {
+      const done = FINALS.filter(has).length;
+      els.nodeInfo.innerHTML = "<b>Ещё рано.</b> Нужно пройти финальные узлы трёх веток: сейчас " +
+        done + " из 3.";
+      return;
+    }
+    S.skills.push(id);
+    save();
+    paintStats();
+    renderTree();
+    say("Теперь я — тот самый", 3500);
+    return;
+  }
+
+  if (!node.needs.every(has)) {
+    const missing = node.needs.filter(x => !has(x))
+      .map(x => (NODES.find(n => n.id === x) || {}).name).filter(Boolean);
+    els.nodeInfo.innerHTML = "<b>Закрыто.</b> Сначала изучите: " + missing.join(", ") + ".";
+    return;
+  }
+  if (S.care < node.cost) {
+    els.nodeInfo.innerHTML = "<b>Не хватает очков заботы.</b> Нужно ещё " + (node.cost - S.care) +
+      ". Очки дают кормление, объятия и шлёпки.";
+    return;
+  }
+
+  S.care -= node.cost;
+  S.skills.push(id);
+  save();
+  paintStats();
+  renderTree();
+
+  if (["fluff", "date", "evening", "best"].indexOf(id) !== -1) {
+    for (let i = 0; i < 10; i++) {
+      S.sparks.push({ x: 32 + rand(-12, 12), y: 34 + rand(-8, 4), vy: rand(-16, -8), life: rand(0.4, 0.9), max: 0.9 });
+    }
+  }
+
+  say("Изучено: " + node.name, 2300);
+  els.nodeInfo.innerHTML = "<b>" + node.name + "</b> — " + node.desc;
+
+  checkFinal();
+}
+
+/** Финальный узел открывается сам, когда пройдены финалы трёх веток. */
+function checkFinal() {
+  const node = NODES.find(n => n.id === "best");
+  if (!node || has("best")) return;
+  if (FINALS.filter(has).length >= (node.needAny || 3)) {
+    S.skills.push("best");
+    save();
+    paintStats();
+    renderTree();
+    say("Теперь я — тот самый 💖", 4000);
+    for (let i = 0; i < 16; i++) {
+      S.hearts.push({ x: 32 + rand(-16, 16), y: 30 + rand(-10, 6), vy: rand(-14, -6), vx: rand(-6, 6), life: rand(1, 2), max: 2 });
+    }
+  }
+}
+
+function renderTree() {
+  const lines = [];
+  for (const node of NODES) {
+    for (const parentId of node.needs) {
+      const parent = NODES.find(n => n.id === parentId);
+      if (!parent) continue;
+      const done = has(node.id);
+      const cls = done ? ' class="done"' : "";
+      // финальный узел — отдельные линии от веток
+      lines.push('<line x1="' + parent.x + '" y1="' + (parent.y + 26) + '" x2="' + node.x +
+        '" y2="' + (node.y - 26) + '"' + cls + "/>");
+    }
+  }
+  els.edges.innerHTML = lines.join("");
+
+  els.nodes.innerHTML = NODES.map(node => {
+    const st = nodeState(node);
+    const badge = st === "done" ? "✓" : (st === "ready" ? (node.final ? "💖" : node.cost) : "🔒");
+    const cls = st === "done" ? "is-done" : (st === "ready" ? "is-ready" : "is-locked");
+    const fin = node.final ? " is-final" : "";
+    return (
+      '<button class="node ' + cls + fin + '" type="button" data-id="' + node.id + '"' +
+      ' style="left:' + (node.x / 400 * 100).toFixed(2) + "%;top:" +
+      (node.y / 520 * 100).toFixed(2) + '%"' +
+      ' aria-label="' + node.name + '">' +
+      '<span class="badge">' + badge + "</span>" +
+      '<span class="node-icon">' + node.icon + "</span>" +
+      '<span class="node-name">' + node.name + "</span>" +
+      "</button>"
+    );
+  }).join("");
+}
+
+function showNodeInfo(id) {
+  const node = NODES.find(n => n.id === id);
+  if (!node) return;
+  const cost = node.cost ? " · " + node.cost + " очков" : "";
+  const st = nodeState(node);
+  const state = st === "done" ? " · изучено" : (st === "ready" ? " · доступно" : " · закрыто");
+  els.nodeInfo.innerHTML = "<b>" + node.name + "</b> — " + node.desc + cost + state;
+}
+
+/* ============================================================
+   10. ВКЛАДКИ
+   ============================================================ */
+function showTab(name) {
+  const pet = name === "pet";
+  const tree = name === "tree";
+  const settings = !pet && !tree;
+
+  els.panelPet.hidden = !pet;
+  els.panelTree.hidden = !tree;
+  els.panelSettings.hidden = !settings;
+
+  els.tabPet.classList.toggle("is-active", pet);
+  els.tabTree.classList.toggle("is-active", tree);
+  els.tabSettings.classList.toggle("is-active", settings);
+  els.tabPet.setAttribute("aria-selected", String(pet));
+  els.tabTree.setAttribute("aria-selected", String(tree));
+  els.tabSettings.setAttribute("aria-selected", String(settings));
+
+  if (tree) renderTree();
+}
+
+/* ============================================================
+   12. ОТРИСОВКА КОМНАТЫ И ПЕРСОНАЖА
+   ============================================================ */
+const C = {
+  eye:   "#2a1a14",
+  blush: "#d98f7a",
+  mouth: "#6d4030",
+  dark:  "#23232b"
+};
+
+function drawRoom() {
+  R(0, 0, 64, 64, "#f6e6c8");
+  ctx.fillStyle = "#f1ddb9";
+  for (let y = 4; y < 44; y += 8) {
+    for (let x = 4; x < 64; x += 8) {
+      ctx.fillRect(x + ((y / 8) % 2 ? 4 : 0), y, 1, 1);
+    }
+  }
+  R(0, 46, 64, 18, "#e3b78c");
+  R(0, 46, 64, 2, "#d5a276");
+  ctx.fillStyle = "#d5a276";
+  for (let x = 0; x < 64; x += 8) ctx.fillRect(x, 48, 1, 16);
+
+  R(19, 50, 26, 1, "#e89a7c");
+  R(16, 51, 32, 1, "#e89a7c");
+  R(13, 52, 38, 1, "#e08a6c");
+  R(12, 53, 40, 1, "#e08a6c");
+  R(13, 54, 38, 1, "#c9715a");
+  R(16, 55, 32, 1, "#c9715a");
+  R(19, 56, 26, 1, "#c9715a");
+
+  R(4, 6, 20, 16, "#d9b892");
+  R(6, 8, 16, 12, "#cfe8f5");
+  R(6, 8, 16, 3, "#b7dcef");
+  R(16, 9, 4, 4, "#ffe08a");
+  R(6, 14, 16, 2, "#eaf6fb");
+  R(12, 14, 5, 1, "#ffffff");
+  R(5, 12, 1, 10, "#d9b892");
+  R(6, 15, 16, 1, "#e7cba7");
+  R(3, 21, 22, 2, "#c99f78");
+
+  R(46, 34, 12, 2, "#c99f78");
+  R(49, 30, 6, 4, "#c9715a");
+  R(50, 26, 4, 4, "#7fae6f");
+  R(49, 24, 3, 2, "#8ec47a");
+  R(52, 25, 3, 3, "#8ec47a");
+
+  // пятнышко от готовки
+  if (S.stain) {
+    R(44, 57, 3, 1, "#a9795c");
+    R(45, 56, 2, 1, "#a9795c");
+    R(46, 58, 1, 1, "#a9795c");
+  }
+}
+
+function drawPet(bob, jump) {
+  const grown = has("best");
+  const x = 32 + bob;
+  const baseY = 50 - jump;
+  const skin = LOOK.skin;
+
+  R(x - 8, 49, 16, 1, "#c99872");
+
+  R(x - 6, baseY - 2, 5, 2, LOOK.shoes);
+  R(x + 1, baseY - 2, 5, 2, LOOK.shoes);
+  R(x - 6, baseY - 1, 5, 1, LOOK.shoeSole);
+  R(x + 1, baseY - 1, 5, 1, LOOK.shoeSole);
+
+  R(x - 5, baseY - 10, 4, 8, LOOK.pants);
+  R(x + 1, baseY - 10, 4, 8, LOOK.pants);
+  R(x - 5, baseY - 5, 4, 1, "#26262e");
+  R(x + 1, baseY - 8, 1, 2, "#26262e");
+
+  const half = grown ? 8 : 7;
+  R(x - half, baseY - 21, half * 2, 11, LOOK.hoodie);
+  R(x - half, baseY - 21, half * 2, 2, LOOK.hoodieDark);
+  R(x - 3, baseY - 14, 6, 4, LOOK.hoodieDark);
+  R(x - 2, baseY - 19, 1, 5, "#d8d8e2");
+  R(x + 1, baseY - 19, 1, 5, "#d8d8e2");
+  R(x + 2, baseY - 18, 1, 1, "#e8e2d6");
+  R(x - half, baseY - 11, half * 2, 1, LOOK.hoodieDark);
+
+  R(x - half - 2, baseY - 20, 2, 9, LOOK.hoodie);
+  R(x + half,     baseY - 20, 2, 9, LOOK.hoodie);
+  R(x - half - 2, baseY - 11, 2, 2, skin);
+  R(x + half,     baseY - 11, 2, 2, skin);
+
+  if (LOOK.backpack) {
+    R(x - half + 1, baseY - 20, 1, 9, "#3a3a46");
+    R(x + half - 1, baseY - 20, 1, 4, "#3a3a46");
+  }
+
+  R(x - 1, baseY - 23, 3, 2, skin);
+  const y0 = baseY - 34;
+  R(x - 7, y0, 14, 11, skin);
+  R(x - 8, y0 + 5, 1, 3, skin);
+  R(x + 7, y0 + 5, 1, 3, skin);
+
+  drawHair(x, y0);
+  drawFace(x, y0);
+
+  // свечение «того самого»
+  if (has("best")) {
+    const pulse = 0.35 + 0.25 * Math.sin(S.t * 2.4);
+    ctx.globalAlpha = pulse;
+    R(x - 10, baseY - 36, 20, 1, "#f0c869");
+    R(x - 11, baseY - 20, 1, 12, "#f0c869");
+    R(x + 10, baseY - 20, 1, 12, "#f0c869");
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawHair(x, y0) {
+  const hair = LOOK.hair;
+  R(x - 6, y0 - 3, 3, 1, hair);
+  R(x - 1, y0 - 4, 3, 1, hair);
+  R(x + 4, y0 - 3, 2, 1, hair);
+  R(x - 7, y0 - 2, 14, 1, hair);
+  R(x - 8, y0 - 1, 16, 3, hair);
+  R(x - 8, y0 + 2, 1, 3, hair);
+  R(x + 7, y0 + 2, 1, 3, hair);
+  R(x - 7, y0 + 2, 5, 1, hair);
+  R(x + 1, y0 + 1, 5, 1, hair);
+  R(x - 3, y0 - 1, 3, 1, LOOK.hairLight);
+  R(x + 2, y0 - 2, 2, 1, LOOK.hairLight);
+}
+
+function drawFace(x, y0) {
+  const eyeY = y0 + 6;
+  const eyes = S.eyes;
+
+  if (eyes === "blink" || eyes === "sleepy") {
+    R(x - 5, eyeY + 1, 2, 1, C.eye);
+    R(x + 3, eyeY + 1, 2, 1, C.eye);
+  } else if (eyes === "happy") {
+    R(x - 5, eyeY + 1, 1, 1, C.eye);
+    R(x - 4, eyeY, 1, 1, C.eye);
+    R(x - 3, eyeY + 1, 1, 1, C.eye);
+    R(x + 2, eyeY + 1, 1, 1, C.eye);
+    R(x + 3, eyeY, 1, 1, C.eye);
+    R(x + 4, eyeY + 1, 1, 1, C.eye);
+  } else if (eyes === "squeeze") {
+    R(x - 5, eyeY, 1, 1, C.eye);
+    R(x - 4, eyeY + 1, 1, 1, C.eye);
+    R(x - 5, eyeY + 2, 1, 1, C.eye);
+    R(x + 4, eyeY, 1, 1, C.eye);
+    R(x + 3, eyeY + 1, 1, 1, C.eye);
+    R(x + 4, eyeY + 2, 1, 1, C.eye);
+  } else {
+    R(x - 5, eyeY, 2, 2, C.eye);
+    R(x + 3, eyeY, 2, 2, C.eye);
+    R(x - 5, eyeY, 1, 1, "#f4f4f8");
+    R(x + 3, eyeY, 1, 1, "#f4f4f8");
+  }
+
+  if (LOOK.glasses) {
+    R(x - 7, eyeY - 1, 5, 1, C.dark);
+    R(x + 2, eyeY - 1, 5, 1, C.dark);
+    R(x - 2, eyeY - 1, 4, 1, C.dark);
+    R(x - 8, eyeY - 1, 1, 2, C.dark);
+    R(x + 7, eyeY - 1, 1, 2, C.dark);
+  }
+
+  R(x - 7, eyeY + 2, 2, 1, C.blush);
+  R(x + 5, eyeY + 2, 2, 1, C.blush);
+
+  if (S.action === "eat") {
+    R(x - 1, eyeY + 3, 2, 2, C.mouth);
+  } else {
+    R(x - 2, eyeY + 3, 1, 1, C.mouth);
+    R(x - 1, eyeY + 4, 2, 1, C.mouth);
+    R(x + 1, eyeY + 3, 1, 1, C.mouth);
+  }
+}
+
+/* ---------- сердечки и искры ---------- */
+const HEART = [
+  ".XX.XX.",
+  "XXXXXXX",
+  "XXXXXXX",
+  ".XXXXX.",
+  "..XXX..",
+  "...X..."
+];
+
+function drawSprite(px, py, scale, color) {
+  ctx.fillStyle = color;
+  for (let y = 0; y < HEART.length; y++) {
+    for (let x = 0; x < HEART[y].length; x++) {
+      if (HEART[y][x] === "X") {
+        ctx.fillRect(Math.round(px + x * scale), Math.round(py + y * scale), scale, scale);
+      }
+    }
+  }
+}
+
+function drawEffects() {
+  for (const h of S.hearts) {
+    ctx.globalAlpha = clamp(h.life / h.max, 0, 1);
+    drawSprite(h.x - 3, h.y - 3, 1, "#ef6b7a");
+    ctx.globalAlpha = 1;
+  }
+  for (const s of S.sparks) {
+    ctx.globalAlpha = clamp(s.life / s.max, 0, 1);
+    R(s.x, s.y, 1, 1, "#ffd166");
+    ctx.globalAlpha = 1;
+  }
+  for (const z of S.zzz) {
+    ctx.globalAlpha = clamp(z.life / z.max, 0, 1);
+    R(z.x, z.y, 3, 1, "#9c8b73");
+    R(z.x + 2, z.y + 1, 1, 1, "#9c8b73");
+    R(z.x, z.y + 2, 3, 1, "#9c8b73");
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ============================================================
+   13. ОБНОВЛЕНИЕ
+   ============================================================ */
+function updateEyes() {
+  if (S.energy < 18 && S.action === null) { S.eyes = "sleepy"; return; }
+  if (S.t < S.blinkUntil) { S.eyes = "blink"; return; }
+  if (S.action === "hug" && S.t < S.actionUntil) { S.eyes = "happy"; return; }
+  if (S.action === "pat" && S.t < S.actionUntil - 0.4) { S.eyes = "squeeze"; return; }
+  S.eyes = "open";
+}
+
+function update(dt) {
+  S.t += dt;
+
+  // энергия тает; навыки уменьшают скорость распада
+  let rate = 1;
+  if (has("patience")) rate *= 0.75;
+  if (has("routine")) rate *= 0.9;
+  S.energy = clamp(S.energy - (dt / LIVE_DECAY) * rate, 0, 100);
+
+  if (S.t > S.nextBlink) {
+    S.blinkUntil = S.t + 0.13;
+    S.nextBlink = S.t + rand(2.4, 5.2);
+  }
+
+  if (S.action && S.t > S.actionUntil) S.action = null;
+
+  if (S.action === "pat") {
+    const p = 1 - (S.actionUntil - S.t) / 0.9;
+    S.jump = Math.round(Math.sin(Math.PI * clamp(p, 0, 1)) * 8);
+  } else {
+    S.jump = 0;
+  }
+
+  if (S.t > S.sayUntil) els.bubble.classList.remove("show");
+
+  for (let i = S.hearts.length - 1; i >= 0; i--) {
+    const h = S.hearts[i];
+    h.life -= dt; h.y += h.vy * dt; h.x += h.vx * dt;
+    if (h.life <= 0) S.hearts.splice(i, 1);
+  }
+  for (let i = S.sparks.length - 1; i >= 0; i--) {
+    const s = S.sparks[i];
+    s.life -= dt; s.y += s.vy * dt;
+    if (s.life <= 0) S.sparks.splice(i, 1);
+  }
+  if (S.energy < 18 && Math.random() < dt * 0.7) {
+    S.zzz.push({ x: 42 + rand(-2, 4), y: 24, life: 1.6, max: 1.6, vy: -6 });
+  }
+  for (let i = S.zzz.length - 1; i >= 0; i--) {
+    const z = S.zzz[i];
+    z.life -= dt; z.y += (z.vy || -6) * dt;
+    if (z.life <= 0) S.zzz.splice(i, 1);
+  }
+
+  // фразы поддержки раз в 30–60 секунд
+  if (S.t > S.nextPhrase) {
+    S.nextPhrase = S.t + rand(30, 60);
+    if (canSpeak()) {
+      if (has("support") && S.mood < 30 && Math.random() < 0.6) say(pick(PLEAS), 5000);
+      else say(pickPhrase(), 5000);
+    }
+  }
+
+  // «Свидание мечты»: раз в сутки при хорошем настроении
+  if (has("date") && S.mood >= 90 && S.dateDay !== dayKey()) {
+    S.dateDay = dayKey();
+    S.mood = clamp(S.mood + 30, 0, 100);
+    S.hunger = clamp(S.hunger + 30, 0, 100);
+    say("Кажется, это лучшее свидание в моей жизни", 4200);
+    for (let i = 0; i < 8; i++) {
+      S.hearts.push({ x: 32 + rand(-14, 14), y: 26 + rand(-8, 6), vy: rand(-14, -8), vx: rand(-5, 5), life: rand(1, 1.8), max: 1.8 });
+    }
+    save();
+  }
+
+  // шутка раз в час
+  if (has("joke")) {
+    const key = hourKey();
+    if (S.jokeKey !== key) {
+      S.jokeKey = key;
+      if (Math.random() < 0.6) {
+        S.jokeUntil = S.t + 20;
+        say(pick(JOKES), 5000);
+        save();
+      }
+    }
+  }
+  if (S.jokeUntil && S.t > S.jokeUntil) S.jokeUntil = 0;
+
+  updateEyes();
+  renderSpecial();
+}
+
+function canSpeak() {
+  return S.action === null && !els.bubble.classList.contains("show");
+}
+
+function pickPhrase() {
+  const pool = has("word") ? MY_PHRASES.concat(BONUS_PHRASES) : MY_PHRASES;
+  return pool.length ? pick(pool) : "Мур.";
+}
+
+/* ============================================================
+   14. ЦИКЛ
+   ============================================================ */
+function render() {
+  drawRoom();
+  const speed = S.energy < 18 ? 1.1 : 2.2;
+  const amp = S.energy < 18 ? 0.5 : 1;
+  const bob = Math.round(Math.sin(S.t * speed) * amp);
+  drawPet(bob, S.jump);
+  drawEffects();
+}
+
+let autoSave = 0;
+let uiTimer = 0;
+
+function frame(now) {
+  // пока идёт вступление, игра не тикает
+  if (INTRO.active) { requestAnimationFrame(frame); return; }
+  if (!S.lastFrame) S.lastFrame = now;
+  const dt = Math.min(Math.max((now - S.lastFrame) / 1000, 0), 0.05);
+  S.lastFrame = now;
+
+  update(dt);
+  render();
+
+  // шкалы должны обновляться сами, а не только после нажатия
+  uiTimer += dt;
+  if (uiTimer > 0.4) { uiTimer = 0; paintStats(); }
+
+  autoSave += dt;
+  if (autoSave > 5) { autoSave = 0; save(); }
+
+  requestAnimationFrame(frame);
+}
+
+/* ============================================================
+   15. СОБЫТИЯ
+   ============================================================ */
+document.querySelectorAll(".act").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const act = btn.dataset.act;
+    if (act === "feed") feed();
+    else if (act === "hug") hug();
+    else if (act === "pat") pat();
+  });
+});
+
+els.canvas.addEventListener("pointerdown", hug);
+
+els.tabPet.addEventListener("click", () => showTab("pet"));
+els.tabTree.addEventListener("click", () => showTab("tree"));
+els.careLine.addEventListener("click", () => showTab("tree"));
+
+els.sayBtn.addEventListener("click", () => {
+  say(pickPhrase(), 5000);
+  S.nextPhrase = S.t + rand(30, 60);
+});
+
+els.special.addEventListener("click", (e) => {
+  const btn = e.target.closest(".sp");
+  if (!btn) return;
+  const id = btn.dataset.sp;
+  if (id === "cook") cook();
+  else if (id === "sleep") sleepPet();
+  else if (id === "tea") blanketTea();
+  else if (id === "wash") washDishes();
+  else if (id === "haha") haha();
+});
+
+els.nodes.addEventListener("click", (e) => {
+  const btn = e.target.closest(".node");
+  if (btn) learnSkill(btn.dataset.id);
+});
+els.nodes.addEventListener("mouseover", (e) => {
+  const btn = e.target.closest(".node");
+  if (btn) showNodeInfo(btn.dataset.id);
+});
+els.nodes.addEventListener("focusin", (e) => {
+  const btn = e.target.closest(".node");
+  if (btn) showNodeInfo(btn.dataset.id);
+});
+
+
+document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
+window.addEventListener("beforeunload", save);
+window.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(els.canvas);
+
+/* ---------- Сброс прогресса ---------- */
+function resetGame() {
+  try { localStorage.removeItem(KEY); } catch (e) { /* игнорируем */ }
+
+  S.hunger = 70;
+  S.mood = 60;
+  S.energy = 80;
+  S.care = 0;
+  S.skills = [];
+  S.flowersDay = "";
+  S.confessionDay = "";
+  S.jokeKey = "";
+  S.stain = false;
+  S.action = null;
+  S.jump = 0;
+  S.hearts.length = 0;
+  S.sparks.length = 0;
+  S.zzz.length = 0;
+  S.nextPhrase = S.t + 30;
+
+  specialSig = null;
+  paintStats();
+  renderTree();
+  save();
+  say("Начнём с чистого листа 🙂", 2600);
+}
+
+/* ============================================================
+   17. ВСТУПИТЕЛЬНАЯ СЦЕНА «ПРОБУЖДЕНИЕ»
+   Рисуется на отдельном холсте 96×72, растягивается CSS.
+   ============================================================ */
+const INTRO_KEY = "intro_enabled";
+const SOUND_KEY = "sound_enabled";
+const NAME_KEY  = "pet_name";
+
+const INTRO = {
+  active: false,
+  t: 0,
+  raf: 0,
+  last: 0,
+  beeped: false,
+  melody: false,
+  typed: 0,
+  running: false
+};
+
+/** Звёзды: позиции фиксированные, мерцают по фазе. */
+const STARS = (() => {
+  const out = [];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  for (let i = 0; i < 36; i++) {
+    out.push({
+      x: Math.floor(rnd() * 96),
+      y: Math.floor(rnd() * 44),
+      p: rnd() * 6.28,
+      big: rnd() < 0.25
+    });
+  }
+  return out;
+})();
+
+const ictx = els.introCanvas.getContext("2d");
+const IW = 96, IH = 72;
+
+function P(x, y, w, h, color) {
+  ictx.fillStyle = color;
+  ictx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+}
+
+function introColor(code, alpha) {
+  ictx.globalAlpha = alpha;
+  P.apply(null, code);
+  ictx.globalAlpha = 1;
+}
+
+/* ---------- элементы сцены ---------- */
+function introRoom(t) {
+  const warm = 0.10 + 0.05 * Math.sin(t * 2);
+
+  // стена и пол
+  P(0, 0, IW, 56, "#463229");
+  P(0, 56, IW, 16, "#6a4a37");
+  P(0, 56, IW, 1, "#6f4d3a");
+  P(0, 60, IW, 1, "#4a3327");
+
+  // окно с луной
+  P(64, 8, 26, 22, "#6f4d3a");
+  P(66, 10, 22, 18, "#1b2438");
+  P(74, 12, 5, 5, "#f3e3c8");
+  P(75, 15, 3, 2, "#f3e3c8");
+  P(68, 22, 1, 1, "#e8dcc0");
+  P(80, 15, 1, 1, "#e8dcc0");
+  P(84, 24, 1, 1, "#e8dcc0");
+  P(77, 10, 1, 20, "#6f4d3a");
+  P(63, 30, 28, 2, "#8a5a3b");
+
+  // кровать
+  P(8, 34, 4, 22, "#6b4a33");       // спинка
+  P(10, 42, 48, 3, "#f3e3c8");      // матрас
+  P(8, 45, 52, 8, "#6b4a33");       // основание
+  P(8, 45, 52, 1, "#8a5a3b");
+  P(12, 36, 15, 6, "#efe0c4");      // подушка
+  P(12, 36, 15, 1, "#fff3e0");
+
+  // одеяло
+  P(26, 39, 32, 6, "#c9734f");
+  P(26, 39, 32, 1, "#e08a63");
+  P(26, 41, 32, 1, "#b8643f");
+
+  // тумбочка и лампа
+  P(64, 46, 12, 10, "#6b4a33");
+  P(65, 47, 10, 1, "#8a5a3b");
+  P(66, 40, 4, 6, "#8a5a3b");
+  P(64, 36, 8, 5, "#f0b96a");
+  P(65, 36, 6, 1, "#ffe1a8");
+
+  // тёплое свечение лампы
+  ictx.globalAlpha = warm;
+  P(58, 32, 22, 18, "#f0b96a");
+  ictx.globalAlpha = 1;
+}
+
+/* ---------- парень ---------- */
+function introGuy(pose, t) {
+  const cx = 38;
+  const skin = LOOK.skin, hair = LOOK.hair, hood = LOOK.hoodie;
+  const rim = "#6b6b7d";          // подсветка от лампы
+  const blink = (Math.floor(t * 2) % 5 === 0) && (t % 0.6 < 0.12);
+
+  if (pose === "lie") {
+    // лежит на подушке, глаза закрыты
+    P(cx - 5, 32, 10, 8, skin);
+    P(cx - 6, 30, 12, 4, hair);
+    P(cx - 6, 33, 12, 1, hair);
+    P(cx - 4, 36, 2, 1, C.eye);
+    P(cx + 2, 36, 2, 1, C.eye);
+    P(cx - 1, 38, 2, 1, C.mouth);
+    P(cx + 4, 33, 1, 6, "#f5c9a3");     // щека на свету
+    P(cx - 6, 39, 12, 2, hood);
+    P(cx + 5, 39, 1, 2, rim);
+    return;
+  }
+
+  const headTop = 20;
+  const eyeY = headTop + 5;
+
+  // голова и волосы
+  P(cx - 5, headTop, 10, 9, skin);
+  P(cx + 4, headTop + 1, 1, 8, "#f5c9a3");   // подсвеченный край лица
+  P(cx - 6, headTop - 2, 12, 4, hair);
+  P(cx - 6, headTop + 1, 1, 2, hair);
+  P(cx + 5, headTop + 1, 1, 2, hair);
+  P(cx - 5, headTop + 1, 3, 1, hair);
+
+  // глаза
+  if (pose === "stretch" || pose === "sit" || blink) {
+    P(cx - 4, eyeY + 1, 2, 1, C.eye);
+    P(cx + 2, eyeY + 1, 2, 1, C.eye);
+  } else if (pose === "smile" || pose === "wave") {
+    P(cx - 4, eyeY + 1, 1, 1, C.eye);
+    P(cx - 3, eyeY, 1, 1, C.eye);
+    P(cx - 2, eyeY + 1, 1, 1, C.eye);
+    P(cx + 1, eyeY + 1, 1, 1, C.eye);
+    P(cx + 2, eyeY, 1, 1, C.eye);
+    P(cx + 3, eyeY + 1, 1, 1, C.eye);
+  } else {
+    P(cx - 4, eyeY, 2, 2, C.eye);
+    P(cx + 2, eyeY, 2, 2, C.eye);
+  }
+
+  if (LOOK.glasses) {
+    P(cx - 5, eyeY - 1, 4, 1, C.dark);
+    P(cx + 1, eyeY - 1, 4, 1, C.dark);
+    P(cx - 1, eyeY - 1, 2, 1, C.dark);
+  }
+
+  // рот
+  if (pose === "smile" || pose === "wave") {
+    P(cx - 2, eyeY + 3, 4, 1, C.mouth);
+    P(cx - 1, eyeY + 4, 2, 1, C.mouth);
+  } else {
+    P(cx - 1, eyeY + 3, 2, 1, C.mouth);
+  }
+
+  // туловище
+  P(cx - 6, headTop + 9, 12, 10, hood);
+  P(cx + 5, headTop + 9, 1, 10, rim);        // контровой свет
+  P(cx - 6, headTop + 9, 12, 1, LOOK.hoodieDark);
+  P(cx - 2, headTop + 12, 1, 4, "#d8d8e2");
+  P(cx + 1, headTop + 12, 1, 4, "#d8d8e2");
+
+  // руки
+  if (pose === "stretch") {
+    const up = Math.round(Math.sin(t * 6));
+    P(cx - 8, headTop - 4 + up, 2, 13, hood);
+    P(cx + 6, headTop - 4 + up, 2, 13, hood);
+    P(cx - 8, headTop - 6 + up, 2, 2, skin);
+    P(cx + 6, headTop - 6 + up, 2, 2, skin);
+  } else if (pose === "rub") {
+    P(cx - 8, headTop + 6, 2, 4, hood);
+    P(cx + 6, headTop + 6, 2, 4, hood);
+    P(cx - 7, eyeY, 2, 3, skin);              // ладони у глаз
+    P(cx + 5, eyeY, 2, 3, skin);
+  } else if (pose === "wave") {
+    const swing = Math.round(Math.sin((t - 5.4) * 9) * 2);
+    P(cx - 8, headTop + 9, 2, 8, hood);
+    P(cx - 8, headTop + 17, 2, 2, skin);
+    P(cx + 6, headTop - 5 + swing, 2, 14, hood);
+    P(cx + 6, headTop - 8 + swing, 3, 3, skin);
+  } else {
+    P(cx - 8, headTop + 9, 2, 8, hood);
+    P(cx + 6, headTop + 9, 2, 8, hood);
+    P(cx - 8, headTop + 17, 2, 2, skin);
+    P(cx + 6, headTop + 17, 2, 2, skin);
+  }
+
+  // одеяло поверх ног
+  P(26, 39, 32, 6, "#c9734f");
+  P(26, 39, 32, 1, "#e08a63");
+}
+
+/* ---------- сцена ---------- */
+function drawIntroScene(t) {
+  const W = IW, H = IH;
+
+  // чёрный фон
+  P(0, 0, W, H, "#0a0b12");
+
+  // 1. звёзды (0–1.4 с)
+  const starP = clamp(t / 0.9, 0, 1);
+  if (starP > 0) {
+    for (const s of STARS) {
+      const tw = 0.45 + 0.55 * Math.abs(Math.sin(t * 1.6 + s.p));
+      ictx.globalAlpha = starP * tw;
+      const size = s.big ? 2 : 1;
+      P(s.x, s.y, size, size, "#f6efdc");
+    }
+    ictx.globalAlpha = 1;
+  }
+
+  // 2. комната проявляется снизу (1–2.5 с)
+  const roomP = clamp((t - 1.0) / 1.5, 0, 1);
+  if (roomP > 0) {
+    introRoom(t);
+    const hide = Math.round(H * (1 - roomP));
+    if (hide > 0) P(0, 0, W, hide, "#0a0b12");
+    // мягкая кромка
+    if (hide > 0 && hide < H) P(0, hide, W, 1, "#0a0b12");
+  }
+
+  // 3. парень (с 2.5 с)
+  if (t >= 2.5) {
+    let pose = "lie";
+    if (t >= 3.3) pose = "stretch";
+    if (t >= 4.0) pose = "sit";
+    if (t >= 4.4) pose = "rub";
+    if (t >= 4.9) pose = "look";
+    if (t >= 5.4) pose = "wave";
+    if (t >= 6.4) pose = "smile";
+    introGuy(pose, t);
+
+    // «пик» при появлении
+    if (!INTRO.beeped) {
+      INTRO.beeped = true;
+      playTone(660, 0.09, "square", 0.04);
+      setTimeout(() => playTone(880, 0.09, "square", 0.035), 110);
+    }
+  }
+}
+
+/* ---------- звук ---------- */
+let audioCtx = null;
+
+function soundOn() {
+  try { return localStorage.getItem(SOUND_KEY) !== "false"; } catch (e) { return true; }
+}
+
+function playTone(freq, dur, type, gain) {
+  if (!soundOn()) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = type || "square";
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.04, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  } catch (e) { /* звук не обязателен */ }
+}
+
+function playMelody() {
+  if (!soundOn()) return;
+  const notes = [523, 659, 784, 659];
+  notes.forEach((f, i) => setTimeout(() => playTone(f, 0.16, "triangle", 0.03), i * 140));
+}
+
+/* ---------- ход анимации ---------- */
+function introFrame(now) {
+  if (!INTRO.running) return;
+  if (!INTRO.last) INTRO.last = now;
+  const dt = Math.min(Math.max((now - INTRO.last) / 1000, 0), 0.05);
+  INTRO.last = now;
+  INTRO.t += dt;
+
+  drawIntroScene(INTRO.t);
+
+  // облачко и кнопка
+  if (INTRO.t >= 6.4) {
+    if (!INTRO.melody) { INTRO.melody = true; playMelody(); }
+    els.introBubble.hidden = false;
+    const full = "О, привет. Ты пришла. Я тут… ждал тебя";
+    const n = Math.min(full.length, Math.floor((INTRO.t - 6.4) * 26));
+    if (n !== INTRO.typed) {
+      INTRO.typed = n;
+      els.introText.textContent = full.slice(0, n);
+      if (n > 0 && n < full.length && n % 3 === 0) playTone(1200, 0.02, "square", 0.012);
+    }
+    if (INTRO.t > 7.4) els.introStart.hidden = false;
+  }
+
+  INTRO.raf = requestAnimationFrame(introFrame);
+}
+
+function startIntro() {
+  cancelAnimationFrame(INTRO.raf);
+  INTRO.active = true;
+  INTRO.running = true;
+  INTRO.t = 0;
+  INTRO.last = 0;
+  INTRO.beeped = false;
+  INTRO.melody = false;
+  INTRO.typed = 0;
+
+  els.intro.hidden = false;
+  els.intro.classList.remove("fade-out");
+  els.introBubble.hidden = true;
+  els.introStart.hidden = true;
+  els.introText.textContent = "";
+  document.body.style.overflow = "hidden";
+
+  // имя для подписи
+  const name = getPetName();
+  els.introName.textContent = name || "";
+  els.introName.hidden = !name;
+
+  INTRO.raf = requestAnimationFrame(introFrame);
+}
+
+function stopIntro() {
+  INTRO.running = false;
+  INTRO.active = false;
+  cancelAnimationFrame(INTRO.raf);
+  els.intro.classList.add("fade-out");
+  document.body.style.overflow = "";
+  setTimeout(() => { els.intro.hidden = true; }, 420);
+}
+
+function getPetName() {
+  let n = "";
+  try { n = localStorage.getItem(NAME_KEY) || ""; } catch (e) { n = ""; }
+  return n || "";
+}
+
+function introEnabled() {
+  try { return localStorage.getItem(INTRO_KEY) !== "false"; } catch (e) { return true; }
+}
+
+function setIntroEnabled(on) {
+  try { localStorage.setItem(INTRO_KEY, on ? "true" : "false"); } catch (e) { /* игнорируем */ }
+}
+
+function setSoundEnabled(on) {
+  try { localStorage.setItem(SOUND_KEY, on ? "true" : "false"); } catch (e) { /* игнорируем */ }
+}
+
+function setPetName(name) {
+  try {
+    if (name) localStorage.setItem(NAME_KEY, name);
+    else localStorage.removeItem(NAME_KEY);
+  } catch (e) { /* игнорируем */ }
+}
+
+/* ============================================================
+   16. СТАРТ
+   ============================================================ */
+function resize() {
+  // Сцена нарисована в системе 64×64. Держим холст ровно таким,
+  // а до размера панели его растягивает CSS с image-rendering: pixelated.
+  // Раньше холст раздувался до ширины панели, и рисунок 64×64
+  // оказывался в левом верхнем углу вместо центра.
+  els.canvas.width = 64;
+  els.canvas.height = 64;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+}
+
+load();
+paintStats();
+renderTree();
+checkFinal();
+resize();
+S.nextPhrase = S.t + rand(30, 60);
+
+const nameEl = document.getElementById("petName");
+if (nameEl) nameEl.textContent = getPetName() || LOOK.name;
+
+/* ---------- настройки ---------- */
+function paintSwitch(el, on) {
+  el.setAttribute("aria-checked", String(on));
+}
+
+paintSwitch(els.introToggle, introEnabled());
+paintSwitch(els.soundToggle, soundOn());
+
+els.introToggle.addEventListener("click", () => {
+  const on = !introEnabled();
+  setIntroEnabled(on);
+  paintSwitch(els.introToggle, on);
+});
+
+els.soundToggle.addEventListener("click", () => {
+  const on = !soundOn();
+  setSoundEnabled(on);
+  paintSwitch(els.soundToggle, on);
+  if (on) playTone(880, 0.08, "square", 0.03);
+});
+
+els.replayIntro.addEventListener("click", () => startIntro());
+els.introStart.addEventListener("click", () => stopIntro());
+
+els.nameInput.value = getPetName();
+els.nameInput.addEventListener("change", () => {
+  const v = els.nameInput.value.trim();
+  setPetName(v);
+  const el = document.getElementById("petName");
+  if (el) el.textContent = v || LOOK.name;
+});
+
+els.tabSettings.addEventListener("click", () => showTab("settings"));
+
+els.resetBtn.addEventListener("click", () => {
+  if (!confirm("Сбросить весь прогресс? Шкалы, очки заботы и навыки вернутся к началу.")) return;
+  resetGame();
+});
+
+// вступление — при каждом запуске, если включено
+if (introEnabled()) startIntro();
+else els.intro.hidden = true;
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
